@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>心情三餐 · 今天吃什么？</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ====== 顶部导航 ====== -->
+    <header class="app-header">
+      <h1 class="app-title">
+        <span class="title-icon">🍽️</span>
+        心情三餐
+      </h1>
+      <button class="btn-settings" id="btnSettings" aria-label="设置" title="设置">
+        ⚙️
+      </button>
+    </header>
+
+    <!-- ====== 主内容区 ====== -->
+    <main class="main-content" id="mainContent">
+
+      <!-- 心情选择区 -->
+      <section class="mood-section" id="moodSection">
+        <p class="mood-question">此刻，你感觉怎么样？</p>
+        <div class="mood-grid" id="moodGrid">
+          <!-- JS 动态生成 -->
+        </div>
+        <div class="mood-text-wrapper">
+          <textarea
+            class="mood-text"
+            id="moodText"
+            placeholder="再多说一点你现在的感受…（选填）"
+            maxlength="200"
+            rows="2"
+          ></textarea>
+          <span class="char-count" id="charCount">0/200</span>
+        </div>
+        <button class="btn-recommend" id="btnRecommend" disabled>
+          <span class="btn-icon">✨</span>
+          给我推荐今天的三餐
+        </button>
+        <p class="hint-text" id="hintText">👆 先选一个心情，再点推荐</p>
+      </section>
+
+      <!-- 结果区（初始隐藏） -->
+      <section class="result-section hidden" id="resultSection">
+        <div class="result-header">
+          <h2>你的一日三餐</h2>
+          <p class="result-mood" id="resultMood"></p>
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading-container hidden" id="loadingContainer">
+          <div class="loading-spinner">
+            <span class="spinner-emoji">👨‍🍳</span>
+          </div>
+          <p class="loading-text" id="loadingText">正在为你精心搭配…</p>
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <!-- 三餐卡片 -->
+        <div class="meals-container hidden" id="mealsContainer">
+          <!-- 早餐 -->
+          <div class="meal-card meal-breakfast">
+            <div class="meal-card-header">
+              <span class="meal-icon">🥣</span>
+              <span class="meal-label">早餐</span>
+              <span class="meal-time">7:00 – 9:00</span>
+            </div>
+            <h3 class="meal-name" id="breakfastName">—</h3>
+            <p class="meal-desc" id="breakfastDesc"></p>
+            <div class="meal-meta">
+              <span class="meal-reason" id="breakfastReason"></span>
+            </div>
+            <div class="meal-footer">
+              <span class="meal-calories" id="breakfastCalories"></span>
+              <span class="meal-tips" id="breakfastTips"></span>
+            </div>
+          </div>
+
+          <!-- 午餐 -->
+          <div class="meal-card meal-lunch">
+            <div class="meal-card-header">
+              <span class="meal-icon">🍱</span>
+              <span class="meal-label">午餐</span>
+              <span class="meal-time">11:30 – 13:30</span>
+            </div>
+            <h3 class="meal-name" id="lunchName">—</h3>
+            <p class="meal-desc" id="lunchDesc"></p>
+            <div class="meal-meta">
+              <span class="meal-reason" id="lunchReason"></span>
+            </div>
+            <div class="meal-footer">
+              <span class="meal-calories" id="lunchCalories"></span>
+              <span class="meal-tips" id="lunchTips"></span>
+            </div>
+          </div>
+
+          <!-- 晚餐 -->
+          <div class="meal-card meal-dinner">
+            <div class="meal-card-header">
+              <span class="meal-icon">🍲</span>
+              <span class="meal-label">晚餐</span>
+              <span class="meal-time">17:30 – 19:30</span>
+            </div>
+            <h3 class="meal-name" id="dinnerName">—</h3>
+            <p class="meal-desc" id="dinnerDesc"></p>
+            <div class="meal-meta">
+              <span class="meal-reason" id="dinnerReason"></span>
+            </div>
+            <div class="meal-footer">
+              <span class="meal-calories" id="dinnerCalories"></span>
+              <span class="meal-tips" id="dinnerTips"></span>
+            </div>
+          </div>
+
+          <!-- 整体点评 -->
+          <div class="overall-note" id="overallNote"></div>
+
+          <!-- 操作按钮 -->
+          <div class="result-actions">
+            <button class="btn-secondary" id="btnRetry">
+              🔄 换一批推荐
+            </button>
+            <button class="btn-secondary" id="btnCopy">
+              📋 复制今日菜单
+            </button>
+          </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error-container hidden" id="errorContainer">
+          <p class="error-emoji">😵</p>
+          <p class="error-title">推荐失败了</p>
+          <p class="error-msg" id="errorMsg"></p>
+          <button class="btn-primary" id="btnRetryError">🔄 再试一次</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ====== 底部 ====== -->
+    <footer class="app-footer">
+      <p>由 Claude AI 精心搭配 · 仅供娱乐参考</p>
+    </footer>
+
+    <!-- ====== 设置面板（侧滑） ====== -->
+    <div class="overlay hidden" id="overlay"></div>
+    <aside class="settings-panel hidden" id="settingsPanel">
+      <div class="settings-header">
+        <h2>⚙️ 设置</h2>
+        <button class="btn-close" id="btnCloseSettings">✕</button>
+      </div>
+      <div class="settings-body">
+        <!-- API Key -->
+        <div class="setting-group">
+          <label class="setting-label" for="apiKey">
+            Anthropic API Key
+            <span class="label-hint">（必填，用于 AI 推荐）</span>
+          </label>
+          <input
+            type="password"
+            class="setting-input"
+            id="apiKey"
+            placeholder="sk-ant-api03-..."
+            autocomplete="off"
+          >
+          <p class="setting-help">
+            Key 仅保存在你的浏览器中，不会上传到任何服务器。
+            <a href="https://console.anthropic.com/" target="_blank" rel="noopener">获取 API Key →</a>
+          </p>
+        </div>
+
+        <!-- 饮食偏好 -->
+        <div class="setting-group">
+          <label class="setting-label">饮食偏好</label>
+
+          <label class="setting-sub-label" for="allergies">过敏 / 忌口食物</label>
+          <input
+            type="text"
+            class="setting-input"
+            id="allergies"
+            placeholder="例如：花生、海鲜、牛奶…"
+          >
+
+          <label class="setting-sub-label" for="taste">口味偏好</label>
+          <select class="setting-input" id="taste">
+            <option value="">不限</option>
+            <option value="清淡">清淡</option>
+            <option value="重口">重口 / 香辣</option>
+            <option value="酸甜">酸甜</option>
+            <option value="咸香">咸香</option>
+          </select>
+
+          <label class="setting-sub-label" for="dietType">饮食类型</label>
+          <select class="setting-input" id="dietType">
+            <option value="">正常饮食</option>
+            <option value="素食">素食</option>
+            <option value="低碳水">低碳水 / 生酮</option>
+            <option value="高蛋白">高蛋白 / 健身餐</option>
+            <option value="地中海">地中海饮食</option>
+          </select>
+
+          <label class="setting-sub-label" for="cuisine">偏好的菜系</label>
+          <select class="setting-input" id="cuisine">
+            <option value="">不限</option>
+            <option value="中式">中式</option>
+            <option value="日韩">日韩料理</option>
+            <option value="西式">西式</option>
+            <option value="东南亚">东南亚</option>
+            <option value="家常">家常菜</option>
+          </select>
+        </div>
+
+        <!-- 模型选择 -->
+        <div class="setting-group">
+          <label class="setting-label" for="modelSelect">AI 模型</label>
+          <select class="setting-input" id="modelSelect">
+            <option value="claude-sonnet-4-20250514">Sonnet（推荐，性价比好）</option>
+            <option value="claude-haiku-4-5-20251001">Haiku（更快更便宜）</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-footer">
+        <button class="btn-primary" id="btnSaveSettings">💾 保存设置</button>
+      </div>
+    </aside>
+
+    <!-- ====== Toast 提示 ====== -->
+    <div class="toast hidden" id="toast"></div>
+
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
