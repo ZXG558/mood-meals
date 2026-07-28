@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS = {
   taste: '',
   dietType: '',
   cuisine: '',
-  model: 'claude-sonnet-4-20250514',
+  model: 'deepseek-chat',
 };
 
 // 当前季节
@@ -53,7 +53,7 @@ function buildPreferencesText(settings) {
   return parts.length > 0 ? parts.join('；') : '无特殊要求，大众口味即可';
 }
 
-// 构建发送给 Claude 的系统 Prompt
+// 构建发送给 AI 的系统 Prompt
 function buildSystemPrompt() {
   return `你是一位温暖又专业的营养师兼私厨。用户会根据当下的心情，请你推荐一日三餐。
 你需要：

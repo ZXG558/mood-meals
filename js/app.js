@@ -230,7 +230,7 @@ function handleError(err) {
   } else if (err.status === 429) {
     msg = '请求太频繁了，请稍等片刻再试。';
   } else if (err.status === 529) {
-    msg = 'Claude API 暂时繁忙，请稍后再试。';
+    msg = 'DeepSeek API 暂时繁忙，请稍后再试。';
   } else if (err.message === 'JSON_PARSE_ERROR') {
     msg = 'AI 返回格式异常，请重试一次。';
   } else if (err.message === 'INCOMPLETE_RESPONSE') {
@@ -287,7 +287,7 @@ function handleCopy() {
     '',
     state.currentResult.overall_note ? `💬 ${state.currentResult.overall_note}` : '',
     '',
-    '—— 由 Claude AI 精心搭配',
+    '—— 由 DeepSeek AI 精心搭配',
   ].join('\n');
 
   if (navigator.clipboard && navigator.clipboard.writeText) {

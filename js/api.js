@@ -1,12 +1,11 @@
 /* ========================================
-   心情三餐 · Claude API 调用封装
+   心情三餐 · DeepSeek API 调用封装
    ======================================== */
 
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_VERSION = '2023-06-01';
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 /**
- * 调用 Claude API 获取三餐推荐
+ * 调用 DeepSeek API 获取三餐推荐
  * @param {Object} params
  * @param {string} params.moodEmoji - 心情 emoji
  * @param {string} params.moodLabel - 心情标签
@@ -23,22 +22,21 @@ async function getMealRecommendations({ moodEmoji, moodLabel, moodText, settings
   const userMessage = buildUserMessage(moodEmoji, moodLabel, moodText, settings);
 
   const body = {
-    model: settings.model || 'claude-sonnet-4-20250514',
+    model: settings.model || 'deepseek-chat',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ],
     max_tokens: 1024,
     temperature: 0.85,
-    system: systemPrompt,
-    messages: [
-      { role: 'user', content: userMessage }
-    ],
+    response_format: { type: 'json_object' },
   };
 
-  const response = await fetch(CLAUDE_API_URL, {
+  const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': settings.apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Authorization': 'Bearer ' + settings.apiKey,
     },
     body: JSON.stringify(body),
   });
@@ -52,16 +50,14 @@ async function getMealRecommendations({ moodEmoji, moodLabel, moodText, settings
   }
 
   const data = await response.json();
-  const content = data.content;
+  const content = data.choices?.[0]?.message?.content;
 
-  // 提取文本内容
-  const textBlock = content.find(block => block.type === 'text');
-  if (!textBlock) {
+  if (!content) {
     throw new Error('NO_TEXT_RESPONSE');
   }
 
-  // 解析 JSON（Claude 可能返回带 markdown 代码块的 JSON）
-  let jsonStr = textBlock.text.trim();
+  // 解析 JSON
+  let jsonStr = content.trim();
 
   // 去掉可能的 markdown 代码块标记
   const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
@@ -73,7 +69,6 @@ async function getMealRecommendations({ moodEmoji, moodLabel, moodText, settings
   try {
     result = JSON.parse(jsonStr);
   } catch (parseErr) {
-    // 尝试提取 JSON 对象
     const objMatch = jsonStr.match(/\{[\s\S]*\}/);
     if (objMatch) {
       try {
