@@ -413,6 +413,17 @@ function bindEvents() {
   // 复制
   $('#btnCopy').addEventListener('click', handleCopy);
 
+  // 测试 API 连接
+  $('#btnTestKey').addEventListener('click', async () => {
+    const key = $('#apiKey').value.trim();
+    const resultEl = $('#testResult');
+    resultEl.classList.remove('hidden');
+    resultEl.textContent = '⏳ 正在测试…';
+    const result = await testApiConnection(key);
+    resultEl.textContent = result.message;
+    resultEl.style.color = result.ok ? 'var(--color-success)' : 'var(--color-error)';
+  });
+
   // ESC 关闭设置
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSettings();

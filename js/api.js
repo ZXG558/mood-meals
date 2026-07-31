@@ -1,8 +1,54 @@
 /* ========================================
-   心情三餐 · DeepSeek API 调用封装
+   深大吃啥 · DeepSeek API 调用封装
    ======================================== */
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+/**
+ * 测试 API Key 是否有效
+ * @param {string} apiKey
+ * @returns {Promise<{ok: boolean, message: string}>}
+ */
+async function testApiConnection(apiKey) {
+  if (!apiKey || !apiKey.trim()) {
+    return { ok: false, message: 'API Key 为空，请先填写' };
+  }
+
+  try {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey.trim(),
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: '回复"OK"' }],
+        max_tokens: 10,
+      }),
+    });
+
+    if (response.ok) {
+      return { ok: true, message: '✅ API Key 有效，连接正常！' };
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    const errMsg = errorData.error?.message || '';
+
+    if (response.status === 401) {
+      return { ok: false, message: '❌ API Key 无效，请检查是否复制完整。去 platform.deepseek.com/api_keys 重新生成。' };
+    }
+    if (response.status === 402) {
+      return { ok: false, message: '❌ 账户余额不足，请去 platform.deepseek.com 充值。' };
+    }
+    if (response.status === 429) {
+      return { ok: false, message: '⚠️ 请求太频繁，稍后再试。' };
+    }
+    return { ok: false, message: '❌ 错误 ' + response.status + '：' + (errMsg || '未知错误') };
+  } catch (e) {
+    return { ok: false, message: '❌ 网络连接失败：' + e.message };
+  }
+}
 
 /**
  * 调用 DeepSeek API 获取三餐推荐
