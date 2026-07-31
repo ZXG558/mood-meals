@@ -6,7 +6,7 @@
   <meta name="format-detection" content="telephone=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>心情三餐 · 今天吃什么？</title>
+  <title>深大吃啥 · 今天吃什么？</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,8 +16,9 @@
     <header class="app-header">
       <h1 class="app-title">
         <span class="title-icon">🍽️</span>
-        心情三餐
+        深大吃啥
       </h1>
+      <span class="app-subtitle">粤海校区</span>
       <button class="btn-settings" id="btnSettings" aria-label="设置" title="设置">
         ⚙️
       </button>
@@ -26,33 +27,108 @@
     <!-- ====== 主内容区 ====== -->
     <main class="main-content" id="mainContent">
 
-      <!-- 心情选择区 -->
+      <!-- 选择区 -->
       <section class="mood-section" id="moodSection">
-        <p class="mood-question">此刻，你感觉怎么样？</p>
+
+        <!-- 哪一餐 -->
+        <p class="section-label">🍴 想吃哪一餐？</p>
+        <div class="chip-row" id="mealSelector">
+          <button class="chip" data-meal="breakfast">🥣 早餐</button>
+          <button class="chip selected" data-meal="lunch">🍱 午餐</button>
+          <button class="chip selected" data-meal="dinner">🍲 晚餐</button>
+        </div>
+
+        <!-- 心情 -->
+        <p class="section-label">😌 你现在的状态？</p>
         <div class="mood-grid" id="moodGrid">
           <!-- JS 动态生成 -->
         </div>
+
+        <!-- 快捷选项 -->
+        <p class="section-label">🎯 快速筛选</p>
+        <div class="quick-options">
+          <!-- 预算 -->
+          <div class="quick-item">
+            <label class="quick-label">💰 预算</label>
+            <select class="quick-select" id="budget">
+              <option value="">不限</option>
+              <option value="省钱">省钱 &lt;15元</option>
+              <option value="正常" selected>正常 15-30元</option>
+              <option value="改善">改善 30-50元</option>
+              <option value="放纵">放纵 50元+</option>
+            </select>
+          </div>
+
+          <!-- 时间 -->
+          <div class="quick-item">
+            <label class="quick-label">⏱️ 时间</label>
+            <select class="quick-select" id="timeAvail">
+              <option value="">不限</option>
+              <option value="赶时间">赶课 15分钟搞定</option>
+              <option value="正常" selected>正常 30分钟左右</option>
+              <option value="悠闲">悠闲 慢慢吃</option>
+            </select>
+          </div>
+
+          <!-- 就餐方式 -->
+          <div class="quick-item">
+            <label class="quick-label">📍 去哪吃</label>
+            <select class="quick-select" id="dineLocation">
+              <option value="">随便</option>
+              <option value="食堂">学校食堂</option>
+              <option value="外卖">点外卖</option>
+              <option value="周边">周边堂食（桂庙/海岸城）</option>
+            </select>
+          </div>
+
+          <!-- 想吃类型 -->
+          <div class="quick-item">
+            <label class="quick-label">🍜 想吃啥</label>
+            <select class="quick-select" id="foodType">
+              <option value="">随便</option>
+              <option value="米饭套餐">米饭套餐</option>
+              <option value="面食">面条/粉</option>
+              <option value="小吃">小吃/炸鸡</option>
+              <option value="汤粥">汤/粥/肠粉</option>
+              <option value="麻辣烫">麻辣烫/冒菜</option>
+              <option value="快餐">汉堡/快餐</option>
+              <option value="轻食">轻食/沙拉</option>
+            </select>
+          </div>
+
+          <!-- 人数 -->
+          <div class="quick-item">
+            <label class="quick-label">👥 几个人</label>
+            <select class="quick-select" id="groupSize">
+              <option value="一个人" selected>一个人</option>
+              <option value="和朋友">和朋友一起</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 额外描述 -->
         <div class="mood-text-wrapper">
           <textarea
             class="mood-text"
             id="moodText"
-            placeholder="再多说一点你现在的感受…（选填）"
+            placeholder="还有啥想说的？比如：昨天吃了炸鸡今天想吃清淡的…（选填）"
             maxlength="200"
             rows="2"
           ></textarea>
           <span class="char-count" id="charCount">0/200</span>
         </div>
-        <button class="btn-recommend" id="btnRecommend" disabled>
+
+        <button class="btn-recommend" id="btnRecommend">
           <span class="btn-icon">✨</span>
-          给我推荐今天的三餐
+          给我推荐
         </button>
-        <p class="hint-text" id="hintText">👆 先选一个心情，再点推荐</p>
+        <p class="hint-text" id="hintText">👆 选好心情和偏好，点推荐</p>
       </section>
 
       <!-- 结果区（初始隐藏） -->
       <section class="result-section hidden" id="resultSection">
         <div class="result-header">
-          <h2>你的一日三餐</h2>
+          <h2 id="resultTitle">你的推荐</h2>
           <p class="result-mood" id="resultMood"></p>
         </div>
 
@@ -61,66 +137,69 @@
           <div class="loading-spinner">
             <span class="spinner-emoji">👨‍🍳</span>
           </div>
-          <p class="loading-text" id="loadingText">正在为你精心搭配…</p>
+          <p class="loading-text" id="loadingText">正在为你搜索深大周边美食…</p>
           <div class="loading-dots">
             <span></span><span></span><span></span>
           </div>
         </div>
 
-        <!-- 三餐卡片 -->
+        <!-- 卡片容器 -->
         <div class="meals-container hidden" id="mealsContainer">
-          <!-- 早餐 -->
-          <div class="meal-card meal-breakfast">
+          <!-- 早餐卡片 -->
+          <div class="meal-card meal-breakfast" id="breakfastCard">
             <div class="meal-card-header">
               <span class="meal-icon">🥣</span>
               <span class="meal-label">早餐</span>
-              <span class="meal-time">7:00 – 9:00</span>
             </div>
             <h3 class="meal-name" id="breakfastName">—</h3>
             <p class="meal-desc" id="breakfastDesc"></p>
+            <div class="meal-tags">
+              <span class="tag tag-where" id="breakfastWhere"></span>
+              <span class="tag tag-price" id="breakfastPrice"></span>
+              <span class="tag tag-time" id="breakfastTime"></span>
+            </div>
             <div class="meal-meta">
               <span class="meal-reason" id="breakfastReason"></span>
             </div>
-            <div class="meal-footer">
-              <span class="meal-calories" id="breakfastCalories"></span>
-              <span class="meal-tips" id="breakfastTips"></span>
-            </div>
+            <p class="meal-tips" id="breakfastTips"></p>
           </div>
 
-          <!-- 午餐 -->
-          <div class="meal-card meal-lunch">
+          <!-- 午餐卡片 -->
+          <div class="meal-card meal-lunch" id="lunchCard">
             <div class="meal-card-header">
               <span class="meal-icon">🍱</span>
               <span class="meal-label">午餐</span>
-              <span class="meal-time">11:30 – 13:30</span>
             </div>
             <h3 class="meal-name" id="lunchName">—</h3>
             <p class="meal-desc" id="lunchDesc"></p>
+            <div class="meal-tags">
+              <span class="tag tag-where" id="lunchWhere"></span>
+              <span class="tag tag-price" id="lunchPrice"></span>
+              <span class="tag tag-time" id="lunchTime"></span>
+            </div>
             <div class="meal-meta">
               <span class="meal-reason" id="lunchReason"></span>
             </div>
-            <div class="meal-footer">
-              <span class="meal-calories" id="lunchCalories"></span>
-              <span class="meal-tips" id="lunchTips"></span>
-            </div>
+            <p class="meal-tips" id="lunchTips"></p>
           </div>
 
-          <!-- 晚餐 -->
-          <div class="meal-card meal-dinner">
+          <!-- 晚餐卡片 -->
+          <div class="meal-card meal-dinner" id="dinnerCard">
             <div class="meal-card-header">
               <span class="meal-icon">🍲</span>
               <span class="meal-label">晚餐</span>
-              <span class="meal-time">17:30 – 19:30</span>
             </div>
             <h3 class="meal-name" id="dinnerName">—</h3>
             <p class="meal-desc" id="dinnerDesc"></p>
+            <div class="meal-tags">
+              <span class="tag tag-where" id="dinnerWhere"></span>
+              <span class="tag tag-price" id="dinnerPrice"></span>
+              <span class="tag tag-time" id="dinnerTime"></span>
+            </div>
             <div class="meal-meta">
               <span class="meal-reason" id="dinnerReason"></span>
             </div>
-            <div class="meal-footer">
-              <span class="meal-calories" id="dinnerCalories"></span>
-              <span class="meal-tips" id="dinnerTips"></span>
-            </div>
+            <p class="meal-tips" id="dinnerTips"></p>
           </div>
 
           <!-- 整体点评 -->
@@ -132,7 +211,7 @@
               🔄 换一批推荐
             </button>
             <button class="btn-secondary" id="btnCopy">
-              📋 复制今日菜单
+              📋 复制菜单
             </button>
           </div>
         </div>
@@ -150,7 +229,7 @@
 
     <!-- ====== 底部 ====== -->
     <footer class="app-footer">
-      <p>由 DeepSeek AI 精心搭配 · 仅供娱乐参考</p>
+      <p>由 DeepSeek AI 搭配 · 深大粤海周边实测 · 仅供参考</p>
     </footer>
 
     <!-- ====== 设置面板（侧滑） ====== -->
@@ -207,7 +286,6 @@
             <option value="素食">素食</option>
             <option value="低碳水">低碳水 / 生酮</option>
             <option value="高蛋白">高蛋白 / 健身餐</option>
-            <option value="地中海">地中海饮食</option>
           </select>
 
           <label class="setting-sub-label" for="cuisine">偏好的菜系</label>

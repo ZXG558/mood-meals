@@ -1,12 +1,13 @@
 /* ========================================
-   心情三餐 · 主应用逻辑
+   深大吃啥 · 主应用逻辑
    ======================================== */
 
 // ----- 全局状态 -----
 const state = {
-  selectedMood: null,       // { emoji, label, value }
+  selectedMood: null,
+  selectedMeals: ['lunch', 'dinner'],
   settings: { ...DEFAULT_SETTINGS },
-  currentResult: null,      // 当前推荐结果
+  currentResult: null,
   isLoading: false,
 };
 
@@ -22,6 +23,7 @@ const dom = {
   hintText: $('#hintText'),
   moodSection: $('#moodSection'),
   resultSection: $('#resultSection'),
+  resultTitle: $('#resultTitle'),
   resultMood: $('#resultMood'),
   loadingContainer: $('#loadingContainer'),
   loadingText: $('#loadingText'),
@@ -40,19 +42,19 @@ function init() {
   renderMoodButtons();
   bindEvents();
   updateRecommendButton();
+  updateMealChips();
 }
 
 // ----- 设置管理 -----
 function loadSettings() {
   try {
-    const saved = localStorage.getItem('mood-meals-settings');
+    const saved = localStorage.getItem('shenzhen-eats-settings');
     if (saved) {
       state.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
     }
   } catch (e) {
     state.settings = { ...DEFAULT_SETTINGS };
   }
-  // 回填设置面板
   $('#apiKey').value = state.settings.apiKey || '';
   $('#allergies').value = state.settings.allergies || '';
   $('#taste').value = state.settings.taste || '';
@@ -69,12 +71,24 @@ function saveSettings() {
   state.settings.cuisine = $('#cuisine').value;
   state.settings.model = $('#modelSelect').value;
 
-  localStorage.setItem('mood-meals-settings', JSON.stringify(state.settings));
+  localStorage.setItem('shenzhen-eats-settings', JSON.stringify(state.settings));
   showToast('✅ 设置已保存');
   closeSettings();
 }
 
-// ----- 渲染心情按钮 -----
+// ----- 餐次选择（chip 按钮） -----
+function updateMealChips() {
+  $$('#mealSelector .chip').forEach(chip => {
+    const meal = chip.dataset.meal;
+    if (state.selectedMeals.includes(meal)) {
+      chip.classList.add('selected');
+    } else {
+      chip.classList.remove('selected');
+    }
+  });
+}
+
+// ----- 心情按钮 -----
 function renderMoodButtons() {
   dom.moodGrid.innerHTML = '';
   MOOD_OPTIONS.forEach((mood) => {
@@ -90,69 +104,82 @@ function renderMoodButtons() {
   });
 }
 
-// ----- 心情选择 -----
 function selectMood(mood, btnEl) {
-  // 取消之前的选择
   $$('.mood-btn').forEach(b => b.classList.remove('selected'));
-
   if (state.selectedMood && state.selectedMood.value === mood.value) {
-    // 再次点击取消选择
     state.selectedMood = null;
   } else {
     state.selectedMood = mood;
     btnEl.classList.add('selected');
   }
-
   updateRecommendButton();
 }
 
 function updateRecommendButton() {
   const hasApiKey = !!state.settings.apiKey;
-  const hasMood = !!state.selectedMood;
-
-  dom.btnRecommend.disabled = !hasMood;
+  const hasMeal = state.selectedMeals.length > 0;
 
   if (!hasApiKey) {
-    dom.hintText.textContent = '⚠️ 请先在设置中填写 API Key';
+    dom.hintText.textContent = '⚠️ 请先在设置中填写 DeepSeek API Key';
     dom.hintText.style.color = 'var(--color-error)';
     dom.btnRecommend.disabled = true;
-  } else if (!hasMood) {
-    dom.hintText.textContent = '👆 先选一个心情，再点推荐';
+  } else if (!hasMeal) {
+    dom.hintText.textContent = '👆 至少选一餐';
     dom.hintText.style.color = 'var(--color-text-lighter)';
+    dom.btnRecommend.disabled = true;
   } else {
     dom.hintText.textContent = '准备好了，点推荐吧！✨';
     dom.hintText.style.color = 'var(--color-success)';
+    dom.btnRecommend.disabled = false;
   }
+}
+
+// ----- 收集所有输入参数 -----
+function collectParams() {
+  return {
+    moodEmoji: state.selectedMood ? state.selectedMood.emoji : '🤔',
+    moodLabel: state.selectedMood ? state.selectedMood.label : '没选',
+    moodText: dom.moodText.value,
+    budget: $('#budget').value,
+    timeAvail: $('#timeAvail').value,
+    dineLocation: $('#dineLocation').value,
+    foodType: $('#foodType').value,
+    groupSize: $('#groupSize').value,
+    selectedMeals: state.selectedMeals,
+    settings: state.settings,
+  };
 }
 
 // ----- 推荐流程 -----
 async function handleRecommend() {
   if (state.isLoading) return;
-  if (!state.selectedMood) return;
+  if (state.selectedMeals.length === 0) return;
   if (!state.settings.apiKey) {
-    showToast('⚠️ 请先在设置中填写 API Key');
+    showToast('⚠️ 请先在设置中填写 DeepSeek API Key');
     return;
   }
 
   state.isLoading = true;
+  const params = collectParams();
 
   // 切换到结果区
   dom.moodSection.classList.add('hidden');
   dom.resultSection.classList.remove('hidden');
-  dom.resultMood.textContent = `心情：${state.selectedMood.emoji} ${state.selectedMood.label}`;
+
+  const mealNames = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' };
+  const selectedNames = params.selectedMeals.map(m => mealNames[m]).join(' · ');
+  dom.resultTitle.textContent = '你的' + selectedNames;
+  dom.resultMood.textContent = state.selectedMood
+    ? `状态：${state.selectedMood.emoji} ${state.selectedMood.label}`
+    : '';
+
   showLoading();
 
   try {
-    const result = await getMealRecommendations({
-      moodEmoji: state.selectedMood.emoji,
-      moodLabel: state.selectedMood.label,
-      moodText: dom.moodText.value,
-      settings: state.settings,
-    });
-
+    const result = await getMealRecommendations(params);
     state.currentResult = result;
     hideLoading();
-    renderMeals(result);
+    renderMeals(result, params.selectedMeals);
   } catch (err) {
     hideLoading();
     handleError(err);
@@ -166,14 +193,13 @@ function showLoading() {
   dom.mealsContainer.classList.add('hidden');
   dom.errorContainer.classList.add('hidden');
 
-  // 随机有趣的加载文案
   const loadingTexts = [
-    '正在为你精心搭配…',
-    '翻阅菜谱中…',
-    '咨询营养师中…',
-    '厨房飘来了灵感…',
-    '正在考虑你的口味…',
-    'AI大厨正在思考…',
+    '正在搜索深大周边美食…',
+    '翻桂庙小吃街菜单中…',
+    '帮你排除踩雷选项…',
+    '食堂还是外卖，这是个问题…',
+    '正在咨询深大老饕…',
+    'AI大厨正在脑中检索…',
   ];
   dom.loadingText.textContent = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
 }
@@ -183,25 +209,41 @@ function hideLoading() {
 }
 
 // ----- 渲染结果 -----
-function renderMeals(result) {
+function renderMeals(result, selectedMeals) {
   dom.mealsContainer.classList.remove('hidden');
   dom.errorContainer.classList.add('hidden');
 
-  const meals = [
-    { key: 'breakfast', idPrefix: 'breakfast' },
-    { key: 'lunch', idPrefix: 'lunch' },
-    { key: 'dinner', idPrefix: 'dinner' },
-  ];
+  const mealKeys = ['breakfast', 'lunch', 'dinner'];
 
-  meals.forEach(({ key, idPrefix }) => {
+  mealKeys.forEach(key => {
+    const card = document.getElementById(key + 'Card');
     const meal = result[key];
-    if (meal) {
-      $(`#${idPrefix}Name`).textContent = meal.name || '—';
-      $(`#${idPrefix}Desc`).textContent = meal.description || '';
-      $(`#${idPrefix}Reason`).textContent = '💡 ' + (meal.mood_reason || '');
-      $(`#${idPrefix}Calories`).textContent = meal.calories || '';
-      $(`#${idPrefix}Tips`).textContent = meal.tips || '';
+
+    if (!meal || !meal.name || !selectedMeals.includes(key)) {
+      card.classList.add('hidden');
+      return;
     }
+
+    card.classList.remove('hidden');
+    $('#' + key + 'Name').textContent = meal.name || '—';
+    $('#' + key + 'Desc').textContent = meal.description || '';
+
+    // 标签：在哪吃、价格、耗时
+    const whereEl = $('#' + key + 'Where');
+    const priceEl = $('#' + key + 'Price');
+    const timeEl = $('#' + key + 'Time');
+
+    whereEl.textContent = '📍 ' + (meal.where_to_get || '');
+    whereEl.classList.toggle('hidden', !meal.where_to_get);
+
+    priceEl.textContent = '💰 ' + (meal.price || '');
+    priceEl.classList.toggle('hidden', !meal.price);
+
+    timeEl.textContent = '⏱️ ' + (meal.time_needed || '');
+    timeEl.classList.toggle('hidden', !meal.time_needed);
+
+    $('#' + key + 'Reason').textContent = '💡 ' + (meal.mood_reason || '');
+    $('#' + key + 'Tips').textContent = meal.tips ? '💬 ' + meal.tips : '';
   });
 
   if (result.overall_note) {
@@ -211,7 +253,6 @@ function renderMeals(result) {
     dom.overallNote.classList.add('hidden');
   }
 
-  // 滚动到结果区
   dom.resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -222,15 +263,13 @@ function handleError(err) {
 
   let msg = '出了点问题，请稍后再试。';
   if (err.message === 'NO_API_KEY') {
-    msg = '请先在设置中填写你的 Anthropic API Key。';
+    msg = '请先在设置中填写你的 DeepSeek API Key。';
   } else if (err.status === 401) {
     msg = 'API Key 无效，请检查是否填写正确。';
-  } else if (err.status === 403) {
-    msg = 'API Key 没有权限，请检查账户状态。';
+  } else if (err.status === 402) {
+    msg = 'API 账户余额不足，请去 DeepSeek 平台充值。';
   } else if (err.status === 429) {
     msg = '请求太频繁了，请稍等片刻再试。';
-  } else if (err.status === 529) {
-    msg = 'DeepSeek API 暂时繁忙，请稍后再试。';
   } else if (err.message === 'JSON_PARSE_ERROR') {
     msg = 'AI 返回格式异常，请重试一次。';
   } else if (err.message === 'INCOMPLETE_RESPONSE') {
@@ -247,18 +286,7 @@ function handleRetry() {
   state.currentResult = null;
   dom.moodSection.classList.remove('hidden');
   dom.resultSection.classList.add('hidden');
-
-  // 随机微调一下心情文字以获得不同结果
-  if (dom.moodText.value.trim()) {
-    const variations = ['', '来点不一样的？', '换个口味吧~', '上次的不太满意'];
-    const suffix = variations[Math.floor(Math.random() * variations.length)];
-    if (suffix && !dom.moodText.value.includes(suffix)) {
-      dom.moodText.value = dom.moodText.value.trim() + '，' + suffix;
-    }
-  }
-
   dom.moodSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  // 直接触发推荐
   setTimeout(() => handleRecommend(), 300);
 }
 
@@ -266,36 +294,34 @@ function handleRetry() {
 function handleCopy() {
   if (!state.currentResult) return;
 
-  const b = state.currentResult.breakfast;
-  const l = state.currentResult.lunch;
-  const d = state.currentResult.dinner;
+  const mealLabels = { breakfast: '🥣 早餐', lunch: '🍱 午餐', dinner: '🍲 晚餐' };
+  const lines = ['🍽️ 深大吃啥 · 今日推荐', ''];
 
-  const text = [
-    '🍽️ 心情三餐 · 今日菜单',
-    '',
-    `🥣 早餐：${b.name}`,
-    `   ${b.description}`,
-    `   ${b.calories} | ${b.tips}`,
-    '',
-    `🍱 午餐：${l.name}`,
-    `   ${l.description}`,
-    `   ${l.calories} | ${l.tips}`,
-    '',
-    `🍲 晚餐：${d.name}`,
-    `   ${d.description}`,
-    `   ${d.calories} | ${d.tips}`,
-    '',
-    state.currentResult.overall_note ? `💬 ${state.currentResult.overall_note}` : '',
-    '',
-    '—— 由 DeepSeek AI 精心搭配',
-  ].join('\n');
+  state.selectedMeals.forEach(key => {
+    const m = state.currentResult[key];
+    if (m && m.name) {
+      lines.push(mealLabels[key] + '：' + m.name);
+      if (m.description) lines.push('   ' + m.description);
+      if (m.where_to_get) lines.push('   📍 ' + m.where_to_get);
+      if (m.price) lines.push('   💰 ' + m.price);
+      if (m.time_needed) lines.push('   ⏱️ ' + m.time_needed);
+      if (m.tips) lines.push('   💬 ' + m.tips);
+      lines.push('');
+    }
+  });
+
+  if (state.currentResult.overall_note) {
+    lines.push('💬 ' + state.currentResult.overall_note);
+    lines.push('');
+  }
+  lines.push('—— 由 DeepSeek AI 搭配 · 深大粤海校区');
+
+  const text = lines.join('\n');
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      showToast('📋 已复制到剪贴板，可以发朋友圈啦');
-    }).catch(() => {
-      fallbackCopy(text);
-    });
+      showToast('📋 已复制，可以发到宿舍群了！');
+    }).catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
   }
@@ -310,18 +336,13 @@ function fallbackCopy(text) {
   document.body.appendChild(textarea);
   textarea.focus();
   textarea.select();
-  try {
-    document.execCommand('copy');
-    showToast('📋 已复制到剪贴板');
-  } catch (e) {
-    showToast('⚠️ 复制失败，请尝试截图保存');
-  }
+  try { document.execCommand('copy'); showToast('📋 已复制到剪贴板'); }
+  catch (e) { showToast('⚠️ 复制失败，请截图保存'); }
   document.body.removeChild(textarea);
 }
 
 // ----- 设置面板 -----
 function openSettings() {
-  // 回填当前值
   $('#apiKey').value = state.settings.apiKey || '';
   $('#allergies').value = state.settings.allergies || '';
   $('#taste').value = state.settings.taste || '';
@@ -338,7 +359,6 @@ function closeSettings() {
   dom.overlay.classList.add('hidden');
   dom.settingsPanel.classList.add('hidden');
   document.body.style.overflow = '';
-  // 刷新推荐按钮状态
   loadSettings();
   updateRecommendButton();
 }
@@ -349,13 +369,27 @@ function showToast(message, duration = 2500) {
   if (toastTimer) clearTimeout(toastTimer);
   dom.toast.textContent = message;
   dom.toast.classList.remove('hidden');
-  toastTimer = setTimeout(() => {
-    dom.toast.classList.add('hidden');
-  }, duration);
+  toastTimer = setTimeout(() => { dom.toast.classList.add('hidden'); }, duration);
 }
 
 // ----- 事件绑定 -----
 function bindEvents() {
+  // 餐次选择
+  $$('#mealSelector .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const meal = chip.dataset.meal;
+      if (state.selectedMeals.includes(meal)) {
+        if (state.selectedMeals.length > 1) {
+          state.selectedMeals = state.selectedMeals.filter(m => m !== meal);
+        }
+      } else {
+        state.selectedMeals = [...state.selectedMeals, meal];
+      }
+      updateMealChips();
+      updateRecommendButton();
+    });
+  });
+
   // 推荐按钮
   dom.btnRecommend.addEventListener('click', handleRecommend);
 
@@ -363,11 +397,7 @@ function bindEvents() {
   dom.moodText.addEventListener('input', () => {
     const len = dom.moodText.value.length;
     dom.charCount.textContent = `${len}/200`;
-    if (len > 180) {
-      dom.charCount.style.color = 'var(--color-error)';
-    } else {
-      dom.charCount.style.color = 'var(--color-text-lighter)';
-    }
+    dom.charCount.style.color = len > 180 ? 'var(--color-error)' : 'var(--color-text-lighter)';
   });
 
   // 设置
@@ -383,7 +413,7 @@ function bindEvents() {
   // 复制
   $('#btnCopy').addEventListener('click', handleCopy);
 
-  // 键盘：ESC 关闭设置
+  // ESC 关闭设置
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSettings();
   });
