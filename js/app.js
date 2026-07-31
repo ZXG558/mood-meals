@@ -275,7 +275,9 @@ function handleError(err) {
   } else if (err.message === 'INCOMPLETE_RESPONSE') {
     msg = 'AI 返回数据不完整，请重试一次。';
   } else if (err.apiMessage) {
-    msg = err.apiMessage;
+    msg = 'API 返回错误：' + err.apiMessage;
+  } else if (err.message) {
+    msg = '错误：' + err.message;
   }
 
   dom.errorMsg.textContent = msg;

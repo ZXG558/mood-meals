@@ -59,13 +59,14 @@ async function testApiConnection(apiKey) {
  * @param {Object} params.settings - 用户设置
  * @returns {Promise<Object>} 三餐推荐结果
  */
-async function getMealRecommendations({ moodEmoji, moodLabel, moodText, settings }) {
+async function getMealRecommendations(params) {
+  const { settings } = params;
   if (!settings.apiKey) {
     throw new Error('NO_API_KEY');
   }
 
   const systemPrompt = buildSystemPrompt();
-  const userMessage = buildUserMessage(moodEmoji, moodLabel, moodText, settings);
+  const userMessage = buildUserMessage(params);
 
   const body = {
     model: settings.model || 'deepseek-chat',
@@ -73,7 +74,7 @@ async function getMealRecommendations({ moodEmoji, moodLabel, moodText, settings
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage },
     ],
-    max_tokens: 1024,
+    max_tokens: 2048,
     temperature: 0.85,
     response_format: { type: 'json_object' },
   };
